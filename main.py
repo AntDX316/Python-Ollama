@@ -1,10 +1,9 @@
 import tkinter as tk
-from tkinter import scrolledtext, font
+from tkinter import scrolledtext
 import requests
 import json
 import threading
-import markdown
-from tkinter import ttk
+import time
 import atexit
 
 class AIGUI:
@@ -13,200 +12,184 @@ class AIGUI:
         self.root.title("AI Response Streamer")
         self.root.geometry("800x600")
 
-        # Bind cleanup to window closing
+        # Bind cleanup
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-        atexit.register(self.cleanup)  # Register cleanup for Python exit
+        atexit.register(self.cleanup)
 
-        # Create main container
         self.main_frame = tk.Frame(self.root, padx=10, pady=10)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Create and pack the prompt label
         self.prompt_label = tk.Label(self.main_frame, text="Enter your prompt:")
         self.prompt_label.pack(pady=(0, 5))
 
-        # Create and pack the prompt input
-        self.prompt_input = tk.Text(self.main_frame, height=3)
+        self.prompt_input = tk.Text(self.main_frame, height=3, font=("TkDefaultFont", 12))
         self.prompt_input.pack(fill=tk.X, pady=(0, 10))
         self.prompt_input.insert("1.0", "Write 200 things a CEO can do")
 
-        # Create button frame for generate and stop buttons
         self.button_frame = tk.Frame(self.main_frame)
         self.button_frame.pack(pady=(0, 10))
 
-        # Create and pack the generate button
         self.generate_button = tk.Button(self.button_frame, text="Generate", command=self.start_generation)
         self.generate_button.pack(side=tk.LEFT, padx=5)
 
-        # Create and pack the stop button
         self.stop_button = tk.Button(self.button_frame, text="Stop", command=self.stop_generation, state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5)
 
-        # Create and pack the response text area
-        self.response_area = scrolledtext.ScrolledText(self.main_frame, wrap=tk.WORD, height=20)
+        # Response area
+        self.response_area = scrolledtext.ScrolledText(self.main_frame, wrap=tk.WORD, height=20, font=("TkDefaultFont", 12))
         self.response_area.pack(fill=tk.BOTH, expand=True)
-        
-        # Configure tags for markdown styling
-        self.response_area.tag_configure("bold", font=("TkDefaultFont", 10, "bold"))
-        self.response_area.tag_configure("italic", font=("TkDefaultFont", 10, "italic"))
-        self.response_area.tag_configure("heading", font=("TkDefaultFont", 12, "bold"))
-        self.response_area.tag_configure("code", font=("Courier", 10))
-        
-        # Store the accumulated response
+        self.response_area.config(state=tk.DISABLED)
+
+        # Markdown-like tags
+        self.response_area.tag_configure("bold", font=("TkDefaultFont", 12, "bold"))
+        self.response_area.tag_configure("italic", font=("TkDefaultFont", 12, "italic"))
+        self.response_area.tag_configure("heading", font=("TkDefaultFont", 15, "bold"))
+        self.response_area.tag_configure("code", font=("Courier", 12))
+
         self.accumulated_response = ""
-        self.last_line_count = 0
-        
-        # Flag to control generation and store response object
         self.is_generating = False
         self.current_response = None
-        
-        # Track if user has scrolled up
-        self.auto_scroll = True
-        self.response_area.bind('<MouseWheel>', self.on_scroll)  # For Windows and macOS
-        self.response_area.bind('<Button-4>', self.on_scroll)    # For Linux
-        self.response_area.bind('<Button-5>', self.on_scroll)    # For Linux
 
-    def on_scroll(self, event):
-        """Handle scroll events to detect when user manually scrolls"""
-        # Get current scroll position
-        current_pos = self.response_area.yview()
-        # If not at the bottom, disable auto-scroll
-        self.auto_scroll = current_pos[1] == 1.0
+        # Keep track of how much text we've displayed so far
+        self.displayed_length = 0
 
-    def apply_markdown_styling(self, text):
-        # Get current scroll position
-        current_scroll = self.response_area.yview()
-        
-        # Get current height
-        current_height = self.response_area.count("1.0", tk.END, "lines")
-        
-        # Clear the text widget
-        self.response_area.delete("1.0", tk.END)
-        
-        # Simple markdown parsing and styling
-        lines = text.split('\n')
-        for line in lines:
-            # Handle headers
-            if line.startswith('#'):
-                count = len(line.split()[0])  # Count the number of #
-                text = line[count:].strip()
-                self.response_area.insert(tk.END, text + '\n', "heading")
-            
-            # Handle bold text
-            elif '**' in line:
-                parts = line.split('**')
-                for i, part in enumerate(parts):
-                    if i % 2 == 1:  # Odd indices are bold
-                        self.response_area.insert(tk.END, part, "bold")
-                    else:
-                        self.response_area.insert(tk.END, part)
-                self.response_area.insert(tk.END, '\n')
-            
-            # Handle code blocks
-            elif line.startswith('```') or line.endswith('```'):
-                continue  # Skip the delimiter lines
-            elif '`' in line:
-                parts = line.split('`')
-                for i, part in enumerate(parts):
-                    if i % 2 == 1:  # Odd indices are code
-                        self.response_area.insert(tk.END, part, "code")
-                    else:
-                        self.response_area.insert(tk.END, part)
-                self.response_area.insert(tk.END, '\n')
-            
-            # Regular text
-            else:
-                self.response_area.insert(tk.END, line + '\n')
-        
-        # Get new height
-        new_height = self.response_area.count("1.0", tk.END, "lines")
-        
-        # Only auto-scroll if user hasn't scrolled up
-        if new_height > current_height and self.auto_scroll:
-            self.response_area.see(tk.END)
-        else:
-            # Otherwise maintain the previous scroll position
-            self.response_area.yview_moveto(current_scroll[0])
-
-    def stop_generation(self):
-        self.is_generating = False
-        if self.current_response:
-            try:
-                self.current_response.close()  # Close the connection to stop server-side generation
-            except:
-                pass
-            self.current_response = None
-        self.stop_button.config(state=tk.DISABLED)
-        self.generate_button.config(state=tk.NORMAL)
-        self.response_area.insert(tk.END, "\n[Generation stopped by user]")
-
-    def generate_response(self):
-        # Reset auto-scroll when starting new generation
-        self.auto_scroll = True
-        # Clear previous response
-        self.accumulated_response = ""
-        self.response_area.delete("1.0", tk.END)
+    def start_generation(self):
         self.generate_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
+        # Reset for a fresh run
+        self.response_area.config(state=tk.NORMAL)
+        self.response_area.delete("1.0", tk.END)
+        self.response_area.config(state=tk.DISABLED)
+        self.accumulated_response = ""
+        self.displayed_length = 0
+        threading.Thread(target=self.generate_response, daemon=True).start()
+
+    def generate_response(self):
         self.is_generating = True
+        accumulated_chars = 0
+        last_update_time = time.time()
 
         try:
-            # Define the API endpoint and payload
             url = "http://74.102.26.111:11434/api/generate"
             data = {
                 "model": "mistral-small:24b",
                 "prompt": self.prompt_input.get("1.0", tk.END).strip()
             }
-
-            # Send the POST request and store the response object
             self.current_response = requests.post(url, json=data, stream=True)
 
             for line in self.current_response.iter_lines():
-                if not self.is_generating:  # Check if we should stop
+                if not self.is_generating:
                     break
-                    
                 if line:
-                    # Parse each JSON line
                     json_line = json.loads(line)
-                    # Extract the response fragment
                     response_fragment = json_line.get("response", "")
-                    
-                    # Accumulate the response
                     self.accumulated_response += response_fragment
-                    
-                    # Apply markdown styling
-                    self.apply_markdown_styling(self.accumulated_response)
-                    
-                    # Update the GUI
-                    self.root.update()
+                    accumulated_chars += len(response_fragment)
+
+                    # Update less frequently
+                    current_time = time.time()
+                    if accumulated_chars >= 50 or (current_time - last_update_time) >= 0.5:
+                        self.display_new_content()
+                        accumulated_chars = 0
+                        last_update_time = current_time
 
         except Exception as e:
+            self.response_area.config(state=tk.NORMAL)
             self.response_area.insert(tk.END, f"\nError: {str(e)}")
-        
+            self.response_area.config(state=tk.DISABLED)
         finally:
+            # Final update
+            if accumulated_chars > 0:
+                self.display_new_content()
+
             self.is_generating = False
             self.current_response = None
             self.generate_button.config(state=tk.NORMAL)
             self.stop_button.config(state=tk.DISABLED)
 
-    def start_generation(self):
-        # Start generation in a separate thread to prevent GUI freezing
-        threading.Thread(target=self.generate_response, daemon=True).start()
+    def display_new_content(self):
+        """Parse only the *new* text from accumulated_response and append it."""
+        new_text = self.accumulated_response[self.displayed_length:]
+        if not new_text:
+            return
 
-    def cleanup(self):
-        """Clean up resources when the application exits"""
+        self.append_markdown(new_text)
+        self.displayed_length = len(self.accumulated_response)
+
+    def append_markdown(self, text):
+        """
+        Append the newly arrived 'text' to the scrolledtext, 
+        parsing basic markdown, but without removing older lines. 
+        If user is near bottom, auto-scroll; otherwise leave them alone.
+        """
+        # Are we at or near the bottom already?
+        yview_before = self.response_area.yview()
+        at_bottom = (yview_before[1] >= 0.99)
+
+        # Break the new chunk into lines and parse
+        lines = text.split('\n')
+
+        self.response_area.config(state=tk.NORMAL)
+        for idx, line in enumerate(lines):
+            # If it's not the last line, add the newline back
+            # so lines don't get run-together
+            suffix = '\n' if (idx < len(lines) - 1) else ''
+
+            if line.startswith('#'):
+                # heading
+                count = len(line.split()[0])  # number of '#' 
+                heading_text = line[count:].strip()
+                self.response_area.insert(tk.END, heading_text + suffix, "heading")
+            elif '**' in line:
+                parts = line.split('**')
+                for i, part in enumerate(parts):
+                    if i % 2 == 1:
+                        self.response_area.insert(tk.END, part, "bold")
+                    else:
+                        self.response_area.insert(tk.END, part)
+                self.response_area.insert(tk.END, suffix)
+            elif '`' in line:
+                parts = line.split('`')
+                for i, part in enumerate(parts):
+                    if i % 2 == 1:
+                        self.response_area.insert(tk.END, part, "code")
+                    else:
+                        self.response_area.insert(tk.END, part)
+                self.response_area.insert(tk.END, suffix)
+            else:
+                self.response_area.insert(tk.END, line + suffix)
+
+        # If user was at bottom, scroll to bottom again
+        if at_bottom:
+            self.response_area.see(tk.END)
+
+        self.response_area.config(state=tk.DISABLED)
+
+    def stop_generation(self):
+        self.is_generating = False
         if self.current_response:
             try:
                 self.current_response.close()
             except:
                 pass
-            self.current_response = None
+        self.stop_button.config(state=tk.DISABLED)
+        self.generate_button.config(state=tk.NORMAL)
+        self.response_area.config(state=tk.NORMAL)
+        self.response_area.insert(tk.END, "\n[Generation stopped by user]")
+        self.response_area.config(state=tk.DISABLED)
+
+    def cleanup(self):
+        if self.current_response:
+            try:
+                self.current_response.close()
+            except:
+                pass
         self.is_generating = False
 
     def on_closing(self):
-        """Handle window closing event"""
         self.cleanup()
         self.root.destroy()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
