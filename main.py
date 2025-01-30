@@ -40,7 +40,8 @@ class AIGUI:
             # Define the API endpoint and payload
             url = "http://74.102.26.111:11434/api/generate"
             data = {
-                "model": "deepseek-r1",
+                "model": "mistral-small:24b",
+                #"model": "deepseek-r1",
                 "prompt": self.prompt_input.get("1.0", tk.END).strip()
             }
 
