@@ -9,3 +9,8 @@ Line 61+ :
 Add your AI models
 left side of comma: name for drop-down menu
 right side of comma: modelID
+
+on Remote PC:
+pip install -r requirements.txt
+change .env-example to .env and add your API_IP and PORT
+python main.py

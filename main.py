@@ -145,7 +145,8 @@ class AIGUI:
         try:
             # Load the IP from .env
             api_ip = os.getenv("API_IP", "127.0.0.1")  # default if missing
-            url = f"http://{api_ip}:11434/api/generate"
+            port = os.getenv("PORT", "11434")  # default Ollama port if missing
+            url = f"http://{api_ip}:{port}/api/generate"
 
             # Resolve the actual model name from the user's selection
             chosen_label = self.selected_model.get()
