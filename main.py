@@ -59,6 +59,19 @@ class AIGUI:
         # Flag to control generation and store response object
         self.is_generating = False
         self.current_response = None
+        
+        # Track if user has scrolled up
+        self.auto_scroll = True
+        self.response_area.bind('<MouseWheel>', self.on_scroll)  # For Windows and macOS
+        self.response_area.bind('<Button-4>', self.on_scroll)    # For Linux
+        self.response_area.bind('<Button-5>', self.on_scroll)    # For Linux
+
+    def on_scroll(self, event):
+        """Handle scroll events to detect when user manually scrolls"""
+        # Get current scroll position
+        current_pos = self.response_area.yview()
+        # If not at the bottom, disable auto-scroll
+        self.auto_scroll = current_pos[1] == 1.0
 
     def apply_markdown_styling(self, text):
         # Get current scroll position
@@ -108,8 +121,8 @@ class AIGUI:
         # Get new height
         new_height = self.response_area.count("1.0", tk.END, "lines")
         
-        # If content has grown, auto-scroll to bottom
-        if new_height > current_height:
+        # Only auto-scroll if user hasn't scrolled up
+        if new_height > current_height and self.auto_scroll:
             self.response_area.see(tk.END)
         else:
             # Otherwise maintain the previous scroll position
@@ -128,6 +141,8 @@ class AIGUI:
         self.response_area.insert(tk.END, "\n[Generation stopped by user]")
 
     def generate_response(self):
+        # Reset auto-scroll when starting new generation
+        self.auto_scroll = True
         # Clear previous response
         self.accumulated_response = ""
         self.response_area.delete("1.0", tk.END)
