@@ -1,5 +1,4 @@
-On Ollama PC CMD/Terminal:
-
+On Ollama PC CMD/Terminal if you want port 11434 to be used:
 set OLLAMA_ADDRESS=0.0.0.0:11434
 set OLLAMA_HOST=http://0.0.0.0:11434
 ollama serve
