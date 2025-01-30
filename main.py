@@ -1,11 +1,16 @@
+import os
+import json
+import time
+import requests
+import threading
+import atexit
 import tkinter as tk
 from tkinter import ttk
-import requests
-import json
-import threading
-import time
-import atexit
 from tkinter import scrolledtext
+from dotenv import load_dotenv
+
+# Load the environment variables from .env
+load_dotenv()
 
 class AIGUI:
     def __init__(self, root):
@@ -13,43 +18,46 @@ class AIGUI:
         self.root.title("AI Response Streamer")
         self.root.geometry("800x600")
 
-        # ----- BASIC STYLE CONFIG -----
+        # ----- Basic style setup for a simple, system-like look -----
         style = ttk.Style(root)
-        # Try using a simple theme:
-        style.theme_use('clam')  # or 'alt', 'default', etc.
+        style.theme_use('clam')  # or 'default', 'alt', 'classic', etc.
 
-        # Create a style with no forced background/foreground,
-        # so it uses the system default look. We only set font & padding.
+        # A basic button style that only changes font & padding
         style.configure(
             "Basic.TButton",
             font=("Helvetica", 12, "bold"),
             padding=8
         )
-        # Slightly lighter on hover (optional)
+        # Slight hover effect (optional)
         style.map(
             "Basic.TButton",
             background=[("active", "#DDDDDD")]
         )
 
-        # Frame & label styles for a minimal look
+        # Frame & label styling for minimal look
         style.configure("MainFrame.TFrame", background="#f0f0f0")
         style.configure("MainLabel.TLabel", background="#f0f0f0", font=("Helvetica", 14))
-        # ---------------------------------------
+        # ------------------------------------------------------------
 
+        # Bind cleanup
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         atexit.register(self.cleanup)
 
+        # Main frame
         self.main_frame = ttk.Frame(self.root, style="MainFrame.TFrame", padding=10)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Prompt label
         self.prompt_label = ttk.Label(self.main_frame, text="Enter your prompt:", style="MainLabel.TLabel")
         self.prompt_label.pack(pady=(0,5))
 
+        # Prompt input
         self.prompt_input = tk.Text(self.main_frame, height=3, font=("TkDefaultFont", 12))
         self.prompt_input.pack(fill=tk.X, pady=(0, 10))
         self.prompt_input.insert("1.0", "Write 200 things a CEO can do")
 
-        # Example model list
+        # Models, sorted by ascending GB
+        # (DisplayString, modelID)
         self.models = [
             ("Llama 3.2 (3B, 2.0GB)",    "llama3.2"),
             ("DeepSeek (7B, 4.7GB)",     "deepseek-r1"),
@@ -57,11 +65,13 @@ class AIGUI:
             ("Phi4 (14B, 9.1GB)",        "phi4"),
             ("Mistral (24B, 14GB)",      "mistral-small:24b")
         ]
-        self.selected_model = tk.StringVar(value=self.models[0][0])
+        self.selected_model = tk.StringVar(value=self.models[0][0])  # default to first
 
+        # Model dropdown label
         model_label = ttk.Label(self.main_frame, text="Select model:", style="MainLabel.TLabel")
         model_label.pack()
 
+        # Model dropdown
         self.model_dropdown = ttk.Combobox(
             self.main_frame,
             textvariable=self.selected_model,
@@ -71,24 +81,30 @@ class AIGUI:
         )
         self.model_dropdown.pack(pady=(0,10))
 
+        # Button frame
         self.button_frame = ttk.Frame(self.main_frame, style="MainFrame.TFrame")
         self.button_frame.pack(pady=(0, 10))
 
+        # Generate button
         self.generate_button = ttk.Button(
-            self.button_frame, text="Generate",
+            self.button_frame,
+            text="Generate",
             command=self.start_generation,
             style="Basic.TButton"
         )
         self.generate_button.pack(side=tk.LEFT, padx=5)
 
+        # Stop button
         self.stop_button = ttk.Button(
-            self.button_frame, text="Stop",
+            self.button_frame,
+            text="Stop",
             command=self.stop_generation,
             state=tk.DISABLED,
             style="Basic.TButton"
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
 
+        # Response area
         self.response_area = scrolledtext.ScrolledText(
             self.main_frame,
             wrap=tk.WORD,
@@ -105,16 +121,18 @@ class AIGUI:
         self.response_area.tag_configure("code", font=("Courier", 12))
 
         self.accumulated_response = ""
+        self.displayed_length = 0
         self.is_generating = False
         self.current_response = None
-        self.displayed_length = 0
 
     def start_generation(self):
         self.generate_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
+        # Clear old response
         self.response_area.config(state=tk.NORMAL)
         self.response_area.delete("1.0", tk.END)
         self.response_area.config(state=tk.DISABLED)
+
         self.accumulated_response = ""
         self.displayed_length = 0
         threading.Thread(target=self.generate_response, daemon=True).start()
@@ -125,16 +143,19 @@ class AIGUI:
         last_update_time = time.time()
 
         try:
-            url = "http://74.102.26.111:11434/api/generate"
+            # Load the IP from .env
+            api_ip = os.getenv("API_IP", "127.0.0.1")  # default if missing
+            url = f"http://{api_ip}:11434/api/generate"
 
+            # Resolve the actual model name from the user's selection
             chosen_label = self.selected_model.get()
-            # find the ID from that display text
             selected_model_id = next(item[1] for item in self.models if item[0] == chosen_label)
 
             data = {
                 "model": selected_model_id,
                 "prompt": self.prompt_input.get("1.0", tk.END).strip()
             }
+
             self.current_response = requests.post(url, json=data, stream=True)
 
             for line in self.current_response.iter_lines():
@@ -184,6 +205,7 @@ class AIGUI:
             suffix = '\n' if (idx < len(lines) - 1) else ''
 
             if line.startswith('#'):
+                # heading
                 count = len(line.split()[0])
                 heading_text = line[count:].strip()
                 self.response_area.insert(tk.END, heading_text + suffix, "heading")
@@ -206,6 +228,7 @@ class AIGUI:
             else:
                 self.response_area.insert(tk.END, line + suffix)
 
+        # If user was at bottom, keep them at bottom
         if at_bottom:
             self.response_area.see(tk.END)
 
@@ -235,6 +258,7 @@ class AIGUI:
     def on_closing(self):
         self.cleanup()
         self.root.destroy()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
