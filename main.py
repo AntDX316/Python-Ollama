@@ -15,7 +15,7 @@ load_dotenv()
 class AIGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("AI Response Streamer")
+        self.root.title("Ollama Response Streamer")
         self.root.geometry("800x600")
 
         # ----- Basic style setup for a simple, system-like look -----
