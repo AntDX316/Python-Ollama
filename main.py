@@ -47,14 +47,41 @@ class AIGUI:
         self.main_frame = ttk.Frame(self.root, style="MainFrame.TFrame", padding=10)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Prompt label
-        self.prompt_label = ttk.Label(self.main_frame, text="Enter your prompt:", style="MainLabel.TLabel")
+        # System Message label
+        system_label = ttk.Label(self.main_frame, text="System Message:", style="MainLabel.TLabel")
+        system_label.pack(pady=(0,5))
+
+        # System Message input
+        self.system_input = tk.Text(self.main_frame, height=2, font=("TkDefaultFont", 12))
+        self.system_input.pack(fill=tk.X, pady=(0, 10))
+        self.system_input.insert("1.0", "You are a helpful AI assistant.")
+
+        # User Message label
+        self.prompt_label = ttk.Label(self.main_frame, text="User Message:", style="MainLabel.TLabel")
         self.prompt_label.pack(pady=(0,5))
 
         # Prompt input
         self.prompt_input = tk.Text(self.main_frame, height=3, font=("TkDefaultFont", 12))
         self.prompt_input.pack(fill=tk.X, pady=(0, 10))
         self.prompt_input.insert("1.0", "Write 200 things a CEO can do")
+
+        # Parameters frame
+        self.params_frame = ttk.Frame(self.main_frame, style="MainFrame.TFrame")
+        self.params_frame.pack(pady=(0, 10))
+
+        # Temperature control
+        temp_label = ttk.Label(self.params_frame, text="Temperature:", style="MainLabel.TLabel")
+        temp_label.pack(side=tk.LEFT, padx=(0, 5))
+        self.temperature_var = tk.StringVar(value="0.7")
+        self.temperature_entry = ttk.Entry(self.params_frame, textvariable=self.temperature_var, width=6)
+        self.temperature_entry.pack(side=tk.LEFT, padx=(0, 20))
+
+        # Max Tokens control
+        tokens_label = ttk.Label(self.params_frame, text="Max Tokens:", style="MainLabel.TLabel")
+        tokens_label.pack(side=tk.LEFT, padx=(0, 5))
+        self.max_tokens_var = tk.StringVar(value="8192")
+        self.max_tokens_entry = ttk.Entry(self.params_frame, textvariable=self.max_tokens_var, width=6)
+        self.max_tokens_entry.pack(side=tk.LEFT)
 
         # Models, sorted by ascending GB
         # (DisplayString, modelID)
@@ -77,7 +104,8 @@ class AIGUI:
             textvariable=self.selected_model,
             values=[m[0] for m in self.models],
             state="readonly",
-            font=("TkDefaultFont", 12)
+            font=("TkDefaultFont", 12),
+            width=30  # Make the dropdown wider
         )
         self.model_dropdown.pack(pady=(0,10))
 
@@ -154,7 +182,10 @@ class AIGUI:
 
             data = {
                 "model": selected_model_id,
-                "prompt": self.prompt_input.get("1.0", tk.END).strip()
+                "prompt": self.prompt_input.get("1.0", tk.END).strip(),
+                "system": self.system_input.get("1.0", tk.END).strip(),
+                "temperature": float(self.temperature_var.get()),
+                "num_predict": int(self.max_tokens_var.get())
             }
 
             self.current_response = requests.post(url, json=data, stream=True)
