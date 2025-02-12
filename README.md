@@ -1,6 +1,8 @@
 Ollama CLI:
 set OLLAMA_HOST=0.0.0.0
+
 set OLLAMA_PORT=11434
+
 ollama serve
 
 
