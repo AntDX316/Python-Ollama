@@ -87,7 +87,7 @@ class AIGUI:
         # (DisplayString, modelID)
         self.models = [
             ("Llama 3.2 (3B, 2.0GB)",    "llama3.2"),
-            ("DeepSeek (7B, 4.7GB)",     "deepseek-r1"),
+            ("DeepSeek (8B, 5.2GB)",     "deepseek-r1"),
             ("Gemma 2 (7B, 5.0GB)",      "gemma2"),
             ("Phi4 (14B, 9.1GB)",        "phi4"),
             ("Mistral (24B, 14GB)",      "mistral-small:24b")
