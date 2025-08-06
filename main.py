@@ -86,11 +86,9 @@ class AIGUI:
         # Models, sorted by ascending GB
         # (DisplayString, modelID)
         self.models = [
-            ("Llama 3.2 (3B, 2.0GB)",    "llama3.2"),
-            ("DeepSeek (8B, 5.2GB)",     "deepseek-r1"),
-            ("Gemma 2 (7B, 5.0GB)",      "gemma2"),
-            ("Phi4 (14B, 9.1GB)",        "phi4"),
-            ("Mistral (24B, 14GB)",      "mistral-small:24b")
+            ("Mistral 7B (7B, 4.1GB)",      "mistral"),
+            ("DeepSeek R1 (8B, 5.2GB)",     "deepseek-r1"),
+            ("OpenAI GPT-OSS-20B (20B, 14GB)",       "gpt-oss")
         ]
         self.selected_model = tk.StringVar(value=self.models[0][0])  # default to first
 

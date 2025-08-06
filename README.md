@@ -14,7 +14,7 @@ https://ollama.com/
 
 A sleek and intuitive desktop application that brings the power of open-source language models to your fingertips.
 
-Python-Ollama GUI provides a user-friendly interface to interact with various AI models through Ollama, featuring real-time response streaming, adjustable parameters, and support for models ranging from the lightweight Llama 3.2 (3B) to the more powerful Mistral (24B).
+Python-Ollama GUI provides a user-friendly interface to interact with various AI models through Ollama, featuring real-time response streaming, adjustable parameters, and support for models ranging from the efficient Mistral (7B) to the more powerful OpenAI (20B).
 
 Perfect for developers, writers, and AI enthusiasts who want to harness AI capabilities without dealing with command-line interfaces.
 
@@ -29,11 +29,9 @@ Perfect for developers, writers, and AI enthusiasts who want to harness AI capab
 - 🛑 Ability to stop generation mid-stream
 - 🎨 Markdown-style formatting in responses
 - 📊 Multiple model support:
-  - Llama 3.2 (3B)
-  - DeepSeek (7B)
-  - Gemma 2 (7B)
-  - Phi4 (14B)
-  - Mistral (24B)
+  - Mistral 7B (7B, 4.1GB)
+  - DeepSeek R1 (8B, 5.2GB)
+  - OpenAI GPT-OSS-20B (20B, 14GB)
 
 ## Prerequisites
 
