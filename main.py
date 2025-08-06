@@ -64,6 +64,10 @@ class AIGUI:
         self.prompt_input = tk.Text(self.main_frame, height=3, font=("TkDefaultFont", 12))
         self.prompt_input.pack(fill=tk.X, pady=(0, 10))
         self.prompt_input.insert("1.0", "Write 200 things a CEO can do")
+        
+        # Bind Enter key to start generation (Shift+Enter for new line)
+        self.prompt_input.bind('<Return>', self.on_enter_key)
+        self.prompt_input.bind('<Shift-Return>', self.on_shift_enter)
 
         # Parameters frame
         self.params_frame = ttk.Frame(self.main_frame, style="MainFrame.TFrame")
@@ -288,6 +292,16 @@ class AIGUI:
         self.response_area.config(state=tk.NORMAL)
         self.response_area.insert(tk.END, "\n[Generation stopped by user]")
         self.response_area.config(state=tk.DISABLED)
+
+    def on_enter_key(self, event):
+        """Handle Enter key press - start generation if not already generating"""
+        if not self.is_generating:
+            self.start_generation()
+        return "break"  # Prevent default behavior (new line)
+    
+    def on_shift_enter(self, event):
+        """Handle Shift+Enter - insert new line normally"""
+        return None  # Allow default behavior (new line)
 
     def cleanup(self):
         if self.current_response:
