@@ -31,7 +31,7 @@ Perfect for developers, writers, and AI enthusiasts who want to harness AI capab
 - 📊 Multiple model support:
   - Mistral 7B (7B, 4.1GB)
   - DeepSeek R1 (8B, 5.2GB)
-  - OpenAI GPT-OSS-20B (20B, 14GB)
+  - OpenAI GPT-OSS (20B, 14GB)
 
 ## Prerequisites
 

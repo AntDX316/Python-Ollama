@@ -88,7 +88,7 @@ class AIGUI:
         self.models = [
             ("Mistral 7B (7B, 4.1GB)",      "mistral"),
             ("DeepSeek R1 (8B, 5.2GB)",     "deepseek-r1"),
-            ("OpenAI GPT-OSS (20B, 14GB)",       "gpt-oss")
+            ("OpenAI GPT-OSS (20B, 14GB)",   "gpt-oss")
         ]
         self.selected_model = tk.StringVar(value=self.models[0][0])  # default to first
 
@@ -186,13 +186,18 @@ class AIGUI:
                 "num_predict": int(self.max_tokens_var.get())
             }
 
-            self.current_response = requests.post(url, json=data, stream=True)
+            self.current_response = requests.post(url, json=data, stream=True, timeout=(10, 60))
 
             for line in self.current_response.iter_lines():
                 if not self.is_generating:
                     break
                 if line:
                     json_line = json.loads(line)
+                    
+                    # Check if generation is complete
+                    if json_line.get("done", False):
+                        break
+                    
                     response_fragment = json_line.get("response", "")
                     self.accumulated_response += response_fragment
                     accumulated_chars += len(response_fragment)
@@ -210,6 +215,13 @@ class AIGUI:
         finally:
             if accumulated_chars > 0:
                 self.display_new_content()
+
+            # Ensure the response connection is properly closed
+            if self.current_response:
+                try:
+                    self.current_response.close()
+                except:
+                    pass
 
             self.is_generating = False
             self.current_response = None
