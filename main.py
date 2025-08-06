@@ -88,7 +88,7 @@ class AIGUI:
         self.models = [
             ("Mistral 7B (7B, 4.1GB)",      "mistral"),
             ("DeepSeek R1 (8B, 5.2GB)",     "deepseek-r1"),
-            ("OpenAI GPT-OSS-20B (20B, 14GB)",       "gpt-oss")
+            ("OpenAI GPT-OSS (20B, 14GB)",       "gpt-oss")
         ]
         self.selected_model = tk.StringVar(value=self.models[0][0])  # default to first
 
